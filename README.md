@@ -1,6 +1,7 @@
 # Netflix GPT
     - Create a react project using vite
     - integrated tailwindcss
+    
 # Features
     - Login/Sign Up Page
         -Sign In/Sign up form

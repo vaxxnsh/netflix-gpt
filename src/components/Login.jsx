@@ -1,18 +1,76 @@
 import Header from "./Header"
 import netflixBg from "../assets/Netflix_Background_Img.jpg";
-import { useEffect, useState } from "react";
-
-
+import {useRef, useState } from "react";
+import validate from "../utils/validate";
+import {createUserWithEmailAndPassword,signInWithEmailAndPassword} from "firebase/auth";
+import { auth } from "../utils/firebase";
+import { useNavigate } from "react-router-dom";
+import { updateProfile } from "firebase/auth";
+import { useDispatch } from "react-redux";
+import {addUser} from "../utils/userSlice";
 
 const Login = () => {
-
+  
   const [isSignIn,setisSignIn] = useState(true);
-
+  const [validMsg,setvalidMsg] = useState(null);
+  const navigate = useNavigate();
+  const email = useRef(null);
+  const password = useRef(null);
+  const fullName = useRef("");
+  const dispatch = useDispatch();
   const changeForm = () => {
-
+    setvalidMsg (null);
     setisSignIn(!isSignIn);
 
   };
+
+  const handleOnClick = () => {
+    
+     let err = validate(email.current.value,password.current.value,fullName.current?.value,isSignIn);
+
+     setvalidMsg(err);
+
+     if(err !== null) return;
+
+    if(!isSignIn){
+      createUserWithEmailAndPassword(auth, email.current.value, password.current.value)
+      .then((userCredential) => {
+         const user = userCredential.user;
+        updateProfile(user, {
+          displayName: fullName.current.value,
+        }).then(() => {
+           dispatch(addUser({
+             uid : user.uid,
+             fullName : fullName.current.value
+           }))
+        }).catch((error) => {
+             setvalidMsg(error.message);
+        });
+
+        navigate("/browse");
+        // ...
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        setvalidMsg(errorCode+" - "+errorMessage);
+      });
+    }
+    else{
+      signInWithEmailAndPassword(auth, email.current.value, password.current.value)
+      .then((userCredential) => {
+        
+        const user = userCredential.user;
+        console.log(user);
+        navigate("/browse");
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        setvalidMsg(errorCode+" - "+errorMessage);
+      });
+    }
+  }
 
   return (
     <div>
@@ -20,21 +78,23 @@ const Login = () => {
 
         <div className="w-full p-0 m-0">
             
-              <form className="absolute top-1/4 left-1/3 w-3/12 h-auto bg-black/80 rounded px-6 py-5 ml-20 z-10">
+              <form onSubmit={(e) => e.preventDefault()} className="absolute top-1/4 left-1/3 w-3/12 h-auto bg-black/80 rounded px-6 py-5 ml-20 z-10">
 
                   <h1 className="text-white text-3xl my-6 font-bold">{(isSignIn === true ? "Sign In" : "Sign Up")}</h1>
 
                   {
-                    !isSignIn && <input type="text" placeholder="Full name" className="my-4 p-3 w-full bg-gray-800/50 text-white" />
+                    !isSignIn && <input  ref={fullName} type="text" placeholder="Full name" className="my-4 p-3 w-full bg-gray-800/50 text-white" />
                   }
                 
-                  <input type="text" placeholder="Email" className="my-4 p-3 w-full bg-gray-800/50 text-white" />
+                  <input ref={email} type="text" placeholder="Email" className="my-4 p-3 w-full bg-gray-800/50 text-white" />
 
-                  <input type="password" placeholder="Password" className="my-4 p-3 w-full bg-gray-800/50 text-white"/>
+                  <input ref={password} type="password" placeholder="Password" className="my-4 p-3 w-full bg-gray-800/50 text-white"/>
 
-                  <button className="my-4 p-3 w-full bg-red-600 text-white rounded hover:bg-red-700">{(isSignIn === true ? "Sign In" : "Sign Up")}</button>
+                  <p className="text-red-600 font-bold">{validMsg}</p>
 
-                  <p className="text-white cursor-pointer underline hover:text-blue-700" onClick={() => changeForm()}>{(isSignIn) ? "New to Netflix? Sign Up." : "Already have an account? Sign In. "}</p>
+                  <button onClick={handleOnClick} className="my-4 p-3 w-full bg-red-600 text-white rounded hover:bg-red-700">{(isSignIn === true ? "Sign In" : "Sign Up")}</button>
+
+                  <p className="text-white cursor-pointer underline hover:text-blue-700" onClick={changeForm}>{(isSignIn) ? "New to Netflix? Sign Up." : "Already have an account? Sign In. "}</p>
 
               </form>
 
